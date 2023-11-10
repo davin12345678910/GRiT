@@ -5,6 +5,7 @@ import time
 import cv2
 import tqdm
 import sys
+import json
 
 from detectron2.config import get_cfg
 from detectron2.data.detection_utils import read_image
@@ -93,33 +94,49 @@ if __name__ == "__main__":
 
     demo = VisualizationDemo(cfg)
 
-    if args.input:
-        for path in tqdm.tqdm(os.listdir(args.input[0]), disable=not args.output):
-            img = read_image(os.path.join(args.input[0], path), format="BGR")
-            start_time = time.time()
-            predictions, visualized_output = demo.run_on_image(img)
-            logger.info(
-                "{}: {} in {:.2f}s".format(
-                    path,
-                    "detected {} instances".format(len(predictions["instances"]))
-                    if "instances" in predictions
-                    else "finished",
-                    time.time() - start_time,
-                )
-            )
+    img = read_image("//home//davin123//GRiT-1//given_image.jpg", format="BGR")
+    predictions, visualized_output = demo.run_on_image(img)
+    out_filename = args.output
+    visualized_output.save(out_filename)
+    # print(predictions)
 
-            if args.output:
-                if not os.path.exists(args.output):
-                    os.mkdir(args.output)
-                if os.path.isdir(args.output):
-                    assert os.path.isdir(args.output), args.output
-                    out_filename = os.path.join(args.output, os.path.basename(path))
-                else:
-                    assert len(args.input) == 1, "Please specify a directory with args.output"
-                    out_filename = args.output
-                visualized_output.save(out_filename)
-            else:
-                cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
-                cv2.imshow(WINDOW_NAME, visualized_output.get_image()[:, :, ::-1])
-                if cv2.waitKey(0) == 27:
-                    break  # esc to quit
+    # now we will go through each of the captions 
+    instances = predictions["instances"]
+
+    # print(instances)
+
+    bounding_boxes = instances.pred_boxes.tensor.tolist()
+
+    # print(bounding_boxes)
+
+    descriptions = instances.pred_object_descriptions
+
+    descriptions = descriptions.data
+
+    # print(descriptions)
+
+    data = {}
+
+    index = 0
+    for bbox in bounding_boxes:
+        data[index] = {"bbox" : bbox}
+        index = index + 1
+
+    index = 0
+    for description in descriptions:
+        data[index]["label"] = description
+        index = index + 1
+
+    # print("THIS IS THE DATA OUTPUT: ", data)
+
+    grit_objects = []
+    for current in data:
+        grit_objects.append(data[current])
+
+    final_json = {"results" : grit_objects}
+
+    print(final_json)
+
+    # here we will write the output to a json 
+    with open("//home//davin123//GRiT-1//output.json", 'w') as json_file:
+        json.dump(final_json, json_file, indent=4)
