@@ -83,7 +83,12 @@ def get_parser():
     return parser
 
 
+'''''''''
+Description: This will allow us to get the dense captions for each of the objects in a given image 
+'''
 if __name__ == "__main__":
+
+    start_time = time.time()
     mp.set_start_method("spawn", force=True)
     args = get_parser().parse_args()
     setup_logger(name="fvcore")
@@ -94,49 +99,54 @@ if __name__ == "__main__":
 
     demo = VisualizationDemo(cfg)
 
-    img = read_image("//home//davin123//GRiT-1//given_image.jpg", format="BGR")
+    # here we will be getting the image
+    img = read_image("//home//davin123//GRiT//given_image.jpg", format="BGR")
+
+    # here we will output the results onto the image
     predictions, visualized_output = demo.run_on_image(img)
     out_filename = args.output
     visualized_output.save(out_filename)
-    # print(predictions)
 
-    # now we will go through each of the captions 
+    # we will save the output from the model 
     instances = predictions["instances"]
 
-    # print(instances)
-
+    # get the bounding boxes of the dense captions
     bounding_boxes = instances.pred_boxes.tensor.tolist()
 
-    # print(bounding_boxes)
-
+    # here we will get all of the dense captions 
     descriptions = instances.pred_object_descriptions
-
     descriptions = descriptions.data
 
-    # print(descriptions)
-
+    # here we will get all of the data which we will later 
+    # store into a json 
     data = {}
 
+    # here we will be storing the bounding boxes
     index = 0
     for bbox in bounding_boxes:
         data[index] = {"bbox" : bbox}
         index = index + 1
 
+    # here we will be storing the dense captions 
     index = 0
     for description in descriptions:
         data[index]["label"] = description
         index = index + 1
 
-    # print("THIS IS THE DATA OUTPUT: ", data)
-
+    # Here we will be getting all of the objects into a list 
     grit_objects = []
     for current in data:
         grit_objects.append(data[current])
 
+    # this is the final json object
     final_json = {"results" : grit_objects}
 
-    print(final_json)
-
-    # here we will write the output to a json 
-    with open("//home//davin123//GRiT-1//output.json", 'w') as json_file:
+    # here we will write the output to a json file 
+    with open("//home//davin123//GRiT//output.json", 'w') as json_file:
         json.dump(final_json, json_file, indent=4)
+
+    end_time = time.time()
+
+    elapsed_time = end_time - start_time
+
+    print("Totaled elapsed_time: ", elapsed_time)
